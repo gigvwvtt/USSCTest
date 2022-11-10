@@ -9,21 +9,20 @@ namespace Project.Controllers;
 [Route("[controller]")]
 public class VkPostsJobController : ControllerBase
 {
-    private readonly ILogger<VkPostsJobController> _logger;
     private readonly IConfiguration _configuration;
     private readonly IVkDataRepository _repository;
+    LogWriter logWriter = new LogWriter("Инициализация контроллера VkPostsJobController");
 
-    public VkPostsJobController(ILogger<VkPostsJobController> logger, IConfiguration configuration, IVkDataRepository repository)
+    public VkPostsJobController(IConfiguration configuration, IVkDataRepository repository)
     {
-        _logger = logger;
         _configuration = configuration;
         _repository = repository;
     }
 
     [HttpPut(Name = "PutDataToDb")]
-    public List<PostData> PutDataToDb()
+    public List<PostData> PutDataToDb(int user_id = 1)
     {
-        var posts = LettersCount();
+        var posts = LettersCount(user_id);
         
         try
         {
@@ -33,19 +32,21 @@ public class VkPostsJobController : ControllerBase
                     _repository.PutPost(post);
                 else
                     _repository.AddPosts(post);
-                _logger.LogInformation($"{DateTime.Now} Успешно добавлен в базу данных элемент с id - {post.id}");
+                logWriter.LogWrite($"Успешно добавлен в базу данных элемент с id - {post.id}");
             }
             return posts;
         }
         catch (Exception ex)
         {
-            _logger.LogError($"{DateTime.Now} Ошибка сохранения в базе данных");
+            logWriter.LogWrite($"Ошибка сохранения в базе данных");
             return posts;
         }
     }
     
-    private IEnumerable<PostData>? GetVkPosts(int user_id = 1)
+    private IEnumerable<PostData>? GetVkPosts(int user_id)
     {
+        logWriter.LogWrite($"Получение данных из API...");
+
         var list = new List<PostData>();
 
         var token =  _configuration["VkToken"];
@@ -63,23 +64,22 @@ public class VkPostsJobController : ControllerBase
                 var itemsElement = document.RootElement.GetProperty("response").GetProperty("items");
                 list = JsonSerializer.Deserialize<List<PostData>>(itemsElement);
             }
-            
+            logWriter.LogWrite($"Данные из API получены");
+
             return list;
         }
     }
     
-    private List<PostData> LettersCount()
+    private List<PostData> LettersCount(int user_id)
     {
-        _logger.LogInformation($"{DateTime.Now} Получение данных из API");
-
         IEnumerable<PostData> data;
         try
         {
-            data = GetVkPosts();
+            data = GetVkPosts(user_id);
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, $"{DateTime.Now} Не удалось получить данные");
+            logWriter.LogWrite($"Не удалось получить данные. Ошибка: {exception.Message}");
             throw;
         }
 
@@ -87,18 +87,17 @@ public class VkPostsJobController : ControllerBase
         if (listOfTextsAndIds.Count == 0)
         {
             var exception = new Exception();
-            _logger.LogError(exception, $"{DateTime.Now} Все тексты пусты!");
+            logWriter.LogWrite($" Все тексты пусты! Ошибка: {exception.Message}");
             throw exception;
         }
 
         var posts = data.ToList();
 
-        _logger.LogInformation($"{DateTime.Now} Подсчёт повторяющихся букв в {listOfTextsAndIds.Count} текстах начался");
+        logWriter.LogWrite($"Подсчёт повторяющихся букв в {listOfTextsAndIds.Count} текстах начался");
 
         for (var j = 0; j < listOfTextsAndIds.Count; j++)
         {
             var text = listOfTextsAndIds[j].text.ToLower().Where(char.IsLetter).OrderBy(x => x).ToArray();
-            //Array.Sort(text);
 
             var cyrillicLength = 'я' - 'а' + 2; // первое значение + буква ё
             var latinLength = 'z' - 'a' + 1;
@@ -155,7 +154,7 @@ public class VkPostsJobController : ControllerBase
             }
         }
 
-        _logger.LogInformation($"{DateTime.Now} Подсчёт повторяющихся букв в {listOfTextsAndIds.Count} текстах закончился");
+        logWriter.LogWrite($"Подсчёт повторяющихся букв в {listOfTextsAndIds.Count} текстах закончился");
 
         return posts;
     }

@@ -13,11 +13,6 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    // test postgressDb connection
-}
-
 app.UseSwagger();
 app.UseSwaggerUI();
 
