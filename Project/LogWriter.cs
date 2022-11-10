@@ -16,7 +16,7 @@ public class LogWriter
         m_exePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         try
         {
-            using (StreamWriter w = File.AppendText(m_exePath + "\\" + "Logs.log"))
+            using (StreamWriter w = File.AppendText($"{m_exePath}\\Logs.log"))
             {
                 Log(logMessage, w);
             }
@@ -31,8 +31,8 @@ public class LogWriter
         try
         {
             txtWriter.Write("\r\nLog Entry : ");
-            txtWriter.WriteLine("{0}", DateTime.Now);
-            txtWriter.WriteLine("  {0}", logMessage);
+            txtWriter.WriteLine($"{DateTime.Now}");
+            txtWriter.WriteLine($"  {logMessage}");
             txtWriter.WriteLine("-------------------------------");
         }
         catch (Exception ex)
